@@ -1,49 +1,69 @@
 {
-  "name": "serve",
-  "version": "11.3.0",
-  "description": "Static file serving and directory listing",
+  "name": "ce",
+  "version": "0.0.1",
+  "description": "Change Environment",
   "scripts": {
-    "test": "yarn lint",
-    "lint": "zeit-eslint --ext .jsx,.js .",
-    "lint-staged": "git diff --diff-filter=ACMRT --cached --name-only '*.js' '*.jsx' | xargs zeit-eslint"
+    "prebuild": "rm -rf dist",
+    "build": "tsc",
+    "prepublishOnly": "npm run build",
+    "lint": "eslint --ext .ts ."
   },
   "files": [
     "bin"
   ],
-  "repository": "zeit/serve",
   "bin": {
-    "serve": "./bin/serve.js"
+    "ce": "./bin/ce.js"
   },
   "keywords": [
     "now",
     "serve",
     "micro",
-    "http-server"
+    "environment"
   ],
-  "author": "leo",
+  "lint-staged": {
+    "*.ts": [
+      "eslint --fix",
+      "git add"
+    ]
+  },
+  "repository": "unixmonster/ce",
+  "author": "Patrick Lynch pjlynch@gmail.com",
   "license": "MIT",
   "devDependencies": {
-    "@zeit/eslint-config-node": "0.3.0",
-    "@zeit/git-hooks": "0.1.4",
-    "eslint": "5.4.0"
-  },
-  "eslintConfig": {
-    "extends": [
-      "@zeit/eslint-config-node"
-    ]
+    "@types/compression": "^1.0.1",
+    "@types/debug": "^4.1.5",
+    "@types/node": "^13.7.0",
+    "@types/npm": "^2.0.31",
+    "@zeit/schemas": "2.6.0",
+    "eslint": "^6.5.1",
+    "eslint-plugin-import": "^2.20.0",
+    "eslint-plugin-jsx-a11y": "^6.2.3",
+    "eslint-plugin-react": "^7.18.0",
+    "eslint-plugin-react-hooks": "^2.3.0"
   },
   "git": {
     "pre-commit": "lint-staged"
   },
   "dependencies": {
-    "@zeit/schemas": "2.6.0",
-    "ajv": "6.5.3",
-    "arg": "2.0.0",
-    "boxen": "1.3.0",
-    "chalk": "2.4.1",
-    "clipboardy": "1.2.3",
-    "compression": "1.7.3",
+    "@types/bytes": "^3.1.0",
+    "@types/content-disposition": "^0.5.2",
+    "@types/dot": "^1.1.3",
+    "@types/mime-types": "^2.1.0",
+    "@types/minimatch": "^3.0.3",
+    "@types/path-is-inside": "^1.0.0",
+    "@types/serve-handler": "^6.1.0",
+    "@types/url-parse": "^1.4.3",
+    "ajv": "^6.11.0",
+    "arg": "^2.0.0",
+    "boxen": "^4.2.0",
+    "chalk": "^3.0.0",
+    "compression": "^1.7.4",
+    "debug": "^4.1.1",
+    "dot": "^1.1.3",
+    "minimatch": "^3.0.4",
+    "registry-url": "^5.1.0",
     "serve-handler": "6.1.2",
-    "update-check": "1.5.2"
+    "update-check": "^1.5.3",
+    "url-parse": "^1.4.7"
   }
 }

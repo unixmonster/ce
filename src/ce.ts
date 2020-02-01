@@ -1,27 +1,27 @@
 #!/usr/bin/env node
 
 // Native
-const http = require('http');
-const https = require('https');
-const path = require('path');
-const fs = require('fs');
-const {promisify} = require('util');
-const {parse} = require('url');
-const os = require('os');
+import http from 'http';
+import https from 'https';
+import path from 'path';
+import fs from 'fs';
+import { promisify } from 'util';
+import { parse } from 'url';
+import os from 'os';
 
 // Packages
-const Ajv = require('ajv');
-const checkForUpdate = require('update-check');
-const chalk = require('chalk');
-const arg = require('arg');
-const {write: copy} = require('clipboardy');
-const handler = require('serve-handler');
-const schema = require('@zeit/schemas/deployment/config-static');
-const boxen = require('boxen');
-const compression = require('compression');
+import Ajv from 'ajv';
+import boxen from 'boxen';
+import checkForUpdate from '../helpers/update-check';
+import chalk from 'chalk';
+import arg from '../helpers/arg';
+import handler from 'serve-handler';
+import schema from '@zeit/schemas/deployment/config-static';
+import compression from 'compression';
+import Debug from 'debug';
 
 // Utilities
-const pkg = require('../package');
+import pkg from '../package.json';
 
 const readFile = promisify(fs.readFile);
 const compressionHandler = promisify(compression());
@@ -127,27 +127,27 @@ const parseEndpoint = (str) => {
 	const url = parse(str);
 
 	switch (url.protocol) {
-	case 'pipe:': {
-		// some special handling
-		const cutStr = str.replace(/^pipe:/, '');
+		case 'pipe:': {
+			// some special handling
+			const cutStr = str.replace(/^pipe:/, '');
 
-		if (cutStr.slice(0, 4) !== '\\\\.\\') {
-			throw new Error(`Invalid Windows named pipe endpoint: ${str}`);
+			if (cutStr.slice(0, 4) !== '\\\\.\\') {
+				throw new Error(`Invalid Windows named pipe endpoint: ${str}`);
+			}
+
+			return [cutStr];
 		}
+		case 'unix:':
+			if (!url.pathname) {
+				throw new Error(`Invalid UNIX domain socket endpoint: ${str}`);
+			}
 
-		return [cutStr];
-	}
-	case 'unix:':
-		if (!url.pathname) {
-			throw new Error(`Invalid UNIX domain socket endpoint: ${str}`);
-		}
-
-		return [url.pathname];
-	case 'tcp:':
-		url.port = url.port || '5000';
-		return [parseInt(url.port, 10), url.hostname];
-	default:
-		throw new Error(`Unknown --listen endpoint scheme (protocol): ${url.protocol}`);
+			return [url.pathname];
+		case 'tcp:':
+			url.port = url.port || '5000';
+			return [parseInt(url.port, 10), url.hostname];
+		default:
+			throw new Error(`Unknown --listen endpoint scheme (protocol): ${url.protocol}`);
 	}
 };
 
@@ -169,7 +169,7 @@ const registerShutdown = (fn) => {
 const getNetworkAddress = () => {
 	for (const name of Object.keys(interfaces)) {
 		for (const interface of interfaces[name]) {
-			const {address, family, internal} = interface;
+			const { address, family, internal } = interface;
 			if (family === 'IPv4' && !internal) {
 				return address;
 			}
@@ -178,7 +178,7 @@ const getNetworkAddress = () => {
 };
 
 const startEndpoint = (endpoint, config, args, previous) => {
-	const {isTTY} = process.stdout;
+	const { isTTY } = process.stdout;
 	const clipboard = args['--no-clipboard'] !== true;
 	const compress = args['--no-compression'] !== true;
 	const httpMode = args['--ssl-cert'] && args['--ssl-key'] ? 'https' : 'http';
@@ -309,12 +309,12 @@ const loadConfig = async (cwd, entry, args) => {
 
 		try {
 			switch (file) {
-			case 'now.json':
-				content = content.static;
-				break;
-			case 'package.json':
-				content = content.now.static;
-				break;
+				case 'now.json':
+					content = content.static;
+					break;
+				case 'package.json':
+					content = content.now.static;
+					break;
 			}
 		} catch (err) {
 			continue;
@@ -331,7 +331,7 @@ const loadConfig = async (cwd, entry, args) => {
 	}
 
 	if (entry) {
-		const {public} = config;
+		const { public } = config;
 		config.public = path.relative(cwd, (public ? path.resolve(entry, public) : entry));
 	}
 
@@ -341,7 +341,7 @@ const loadConfig = async (cwd, entry, args) => {
 
 		if (!validateSchema(config)) {
 			const defaultMessage = error('The configuration you provided is wrong:');
-			const {message, params} = validateSchema.errors[0];
+			const { message, params } = validateSchema.errors[0];
 
 			console.error(`${defaultMessage}\n${message}\n${JSON.stringify(params)}`);
 			process.exit(1);
@@ -420,7 +420,7 @@ const loadConfig = async (cwd, entry, args) => {
 	const config = await loadConfig(cwd, entry, args);
 
 	if (args['--single']) {
-		const {rewrites} = config;
+		const { rewrites } = config;
 		const existingRewrites = Array.isArray(rewrites) ? rewrites : [];
 
 		// As the first rewrite rule, make `--single` work
