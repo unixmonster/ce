@@ -9,8 +9,28 @@
     "sourceRoot": "./src",
     "incremental": true,
     "strict": true,
-   ) "esModuleInterop": true,
+    "esModuleInterop": true,
     "resolveJsonModule": true,
+    "noImplicitAny": true,
   },
   "exclude": ["node_modules", "dist"]
 }
+
+
+
+// Noting these options as interesting
+// {
+//   "compilerOptions": {
+//     "sourceMap": true,
+//     "skipLibCheck": true,
+//     "typeRoots": [
+//       "src/customTypings",
+//       "node_modules/@types"
+//     ]
+//   },
+//   "references": [
+//     {
+//       "path": "../src"
+//     }
+//   ]
+// }

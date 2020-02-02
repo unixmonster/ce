@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 // Native
-import http from 'http';
+import http, { ServerResponse } from 'http';
 import https from 'https';
 import path from 'path';
 import fs from 'fs';
@@ -16,7 +16,7 @@ import checkForUpdate from '../helpers/update-check';
 import chalk from 'chalk';
 import arg from '../helpers/arg';
 import handler from 'serve-handler';
-import schema from '@zeit/schemas/deployment/config-static';
+import schema from '../templates/config-static'
 import compression from 'compression';
 import Debug from 'debug';
 
@@ -28,11 +28,11 @@ const compressionHandler = promisify(compression());
 
 const interfaces = os.networkInterfaces();
 
-const warning = (message) => chalk`{yellow WARNING:} ${message}`;
-const info = (message) => chalk`{magenta INFO:} ${message}`;
-const error = (message) => chalk`{red ERROR:} ${message}`;
+const warning = (message: string) => chalk`{yellow WARNING:} ${message}`;
+const info = (message: string) => chalk`{magenta INFO:} ${message}`;
+const error = (message: string) => chalk`{red ERROR:} ${message}`;
 
-const updateCheck = async (isDebugging) => {
+const updateCheck = async (isDebugging: boolean) => {
 	let update = null;
 
 	try {
@@ -117,8 +117,8 @@ const getHelp = () => chalk`
           {bold $} {cyan serve} -l pipe:\\\\.\\pipe\\{underline PipeName}
 `;
 
-const parseEndpoint = (str) => {
-	if (!isNaN(str)) {
+const parseEndpoint = (str: string) => {
+	if (!isNaN(Number(str))) {
 		return [str];
 	}
 
@@ -151,7 +151,7 @@ const parseEndpoint = (str) => {
 	}
 };
 
-const registerShutdown = (fn) => {
+const registerShutdown = (fn: any) => {
 	let run = false;
 
 	const wrapper = () => {
@@ -168,8 +168,8 @@ const registerShutdown = (fn) => {
 
 const getNetworkAddress = () => {
 	for (const name of Object.keys(interfaces)) {
-		for (const interface of interfaces[name]) {
-			const { address, family, internal } = interface;
+		for (const _interface of interfaces[name]) {
+			const { address, family, internal } = _interface;
 			if (family === 'IPv4' && !internal) {
 				return address;
 			}
@@ -177,13 +177,13 @@ const getNetworkAddress = () => {
 	}
 };
 
-const startEndpoint = (endpoint, config, args, previous) => {
+const startEndpoint = (endpoint: any, config: any, args: any, previous: any) => {
 	const { isTTY } = process.stdout;
 	const clipboard = args['--no-clipboard'] !== true;
 	const compress = args['--no-compression'] !== true;
 	const httpMode = args['--ssl-cert'] && args['--ssl-key'] ? 'https' : 'http';
 
-	const serverHandler = async (request, response) => {
+	const serverHandler = async (request: any, response: any) => {
 		if (args['--cors']) {
 			response.setHeader('Access-Control-Allow-Origin', '*');
 		}
