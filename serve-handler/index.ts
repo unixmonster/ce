@@ -8,7 +8,7 @@ import { realpath, lstat, createReadStream, readdir } from 'fs';
 import url from 'url-parse';
 import slasher from '../helpers/glob-slash';
 import minimatch from 'minimatch';
-import pathToRegExp from 'path-to-regexp';
+import { pathToRegexp, compile as regexCompile } from 'path-to-regexp';
 import mime from 'mime-types';
 import bytes from 'bytes';
 import contentDisposition from 'content-disposition';
@@ -45,7 +45,7 @@ const sourceMatches = (source: any, requestPath: any, allowSegments?: any) => {
 
     if (allowSegments) {
         const normalized = slashed.replace('*', '(.*)');
-        const expression = pathToRegExp(normalized, keys);
+        const expression = pathToRegexp(normalized, keys);
 
         results = expression.exec(resolvedPath);
 
@@ -67,7 +67,7 @@ const sourceMatches = (source: any, requestPath: any, allowSegments?: any) => {
     return null;
 };
 
-const toTarget = (source, destination, previousPath) => {
+const toTarget = (source: any, destination: any, previousPath: any) => {
     const matches = sourceMatches(source, previousPath, true);
 
     if (!matches) {
@@ -79,7 +79,7 @@ const toTarget = (source, destination, previousPath) => {
     const props = {};
     const { protocol } = url(destination);
     const normalizedDest = protocol ? destination : slasher(destination);
-    const toPath = pathToRegExp.compile(normalizedDest);
+    const toPath = regexCompile(normalizedDest);
 
     for (let index = 0; index < keys.length; index++) {
         const { name } = keys[index];

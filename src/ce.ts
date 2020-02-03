@@ -16,14 +16,12 @@ import clipboardy from 'clipboardy';
 import checkForUpdate from '../helpers/update-check';
 import chalk from 'chalk';
 import arg from '../helpers/arg';
-import handler from 'serve-handler';
+import handler from '../serve-handler';
 import schema from '../templates/config-static'
 import compression from 'compression';
-import Debug from 'debug';
 
 // Utilities
 import pkg from '../package.json';
-import { StringDecoder } from 'string_decoder';
 
 const readFile = promisify(fs.readFile);
 const compressionHandler = promisify(compression());
