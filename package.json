@@ -5,6 +5,7 @@
   "scripts": {
     "prebuild": "rm -rf dist",
     "build": "tsc",
+    "prebinary": "npm run build && pushd dist && NODE_ENV=production npm install",
     "prepublishOnly": "npm run build",
     "lint": "eslint --ext .ts ."
   },
@@ -12,7 +13,7 @@
     "bin"
   ],
   "bin": {
-    "ce": "./bin/ce.js"
+    "ce": "./src/ce.js"
   },
   "keywords": [
     "now",
@@ -58,9 +59,12 @@
     "chalk": "^3.0.0",
     "clipboardy": "^2.1.0",
     "compression": "^1.7.4",
+    "content-disposition": "^0.5.3",
     "dot": "^1.1.3",
     "minimatch": "^3.0.4",
+    "path-is-inside": "^1.0.2",
     "path-to-regexp": "^6.1.0",
+    "range-parser": "^1.2.1",
     "registry-url": "^5.1.0",
     "url-parse": "^1.4.7"
   }
