@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 
 // Native
-import http, { ServerResponse } from 'http';
+import http from 'http';
 import https from 'https';
 import path from 'path';
 import fs from 'fs';
@@ -50,20 +50,20 @@ const updateCheck = async (isDebugging: boolean) => {
         return;
     }
 
-    console.log(`${chalk.bgRed('UPDATE AVAILABLE')} The latest version of \`serve\` is ${update.latest}`);
+    console.log(`${chalk.bgRed('UPDATE AVAILABLE')} The latest version of \`ce\` is ${update.latest}`);
 };
 
 const getHelp = () => chalk`
-  {bold.cyan serve} - Static file serving and directory listing
+  {bold.cyan ce} - Static file serving and directory listing
 
   {bold USAGE}
 
-      {bold $} {cyan serve} --help
-      {bold $} {cyan serve} --version
-      {bold $} {cyan serve} folder_name
-      {bold $} {cyan serve} [-l {underline listen_uri} [-l ...]] [{underline directory}]
+      {bold $} {cyan ce} --help
+      {bold $} {cyan ce} --version
+      {bold $} {cyan ce} folder_name
+      {bold $} {cyan ce} [-l {underline listen_uri} [-l ...]] [{underline directory}]
 
-      By default, {cyan serve} will listen on {bold 0.0.0.0:5000} and serve the
+      By default, {cyan ce} will listen on {bold 0.0.0.0:5000} and serve the
       current working directory on that address.
 
       Specifying a single {bold --listen} argument will overwrite the default, not supplement it.
@@ -97,24 +97,24 @@ const getHelp = () => chalk`
 
   {bold ENDPOINTS}
 
-      Listen endpoints (specified by the {bold --listen} or {bold -l} options above) instruct {cyan serve}
+      Listen endpoints (specified by the {bold --listen} or {bold -l} options above) instruct {cyan ce}
       to listen on one or more interfaces/ports, UNIX domain sockets, or Windows named pipes.
 
       For TCP ports on hostname "localhost":
 
-          {bold $} {cyan serve} -l {underline 1234}
+          {bold $} {cyan ce} -l {underline 1234}
 
       For TCP (traditional host/port) endpoints:
 
-          {bold $} {cyan serve} -l tcp://{underline hostname}:{underline 1234}
+          {bold $} {cyan ce} -l tcp://{underline hostname}:{underline 1234}
 
       For UNIX domain socket endpoints:
 
-          {bold $} {cyan serve} -l unix:{underline /path/to/socket.sock}
+          {bold $} {cyan ce} -l unix:{underline /path/to/socket.sock}
 
       For Windows named pipe endpoints:
 
-          {bold $} {cyan serve} -l pipe:\\\\.\\pipe\\{underline PipeName}
+          {bold $} {cyan ce} -l pipe:\\\\.\\pipe\\{underline PipeName}
 `;
 
 const parseEndpoint = (str: string) => {
