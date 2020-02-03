@@ -6,7 +6,7 @@
     "prebuild": "rm -rf dist",
     "build": "tsc",
     "prebinary": "npm run build && pushd dist && NODE_ENV=production npm install",
-    "doinstall": "npm run prebinary && pushd dist && npm link",
+    "doinstall": "npm run prebinary && pushd dist && NODE_ENV=production npm link",
     "prepublishOnly": "npm run build",
     "lint": "eslint --ext .ts ."
   },
