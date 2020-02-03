@@ -282,12 +282,7 @@ const loadConfig = async (cwd, entry, args) => {
         files.unshift(args['--config']);
     }
 
-    const config = {
-        publicStuff: null,
-        etag: null,
-        rewrites: null,
-        symlinks: null
-    };
+    const config: any = {};
 
     for (const file of files) {
         const location = path.resolve(entry, file);
@@ -358,7 +353,7 @@ const loadConfig = async (cwd, entry, args) => {
     }
 
     // "ETag" headers are enabled by default unless `--no-etag` is provided
-    config.etag = !args['--no-etag'];
+    config.ETag = !args['--no-etag'];
 
     return config;
 };

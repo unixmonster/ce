@@ -547,9 +547,9 @@ const getHandlers = methods => Object.assign({
     sendError
 }, methods);
 
-module.exports = async (request, response, config = {}, methods = {}) => {
+module.exports = async (request: any, response: any, config: any = {}, methods: any = {}) => {
     const cwd = process.cwd();
-    const current = config.public ? path.resolve(cwd, config.public) : cwd;
+    const current = config.publicStuff ? path.resolve(cwd, config.publicStuff) : cwd;
     const handlers = getHandlers(methods);
 
     let relativePath = null;
