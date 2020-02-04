@@ -14,16 +14,21 @@ import bytes from 'bytes';
 import contentDisposition from 'content-disposition';
 import isPathInside from 'path-is-inside';
 import parseRange from 'range-parser';
-import doT from 'doT';
+import Debug from "debug";
+
+const debug = Debug('serve-handler');
 
 // Other
-const directoryTemplate = doT.template('../templates/directory.jst');
-const errorTemplate = doT.template('../templates/error.jst')
+const directoryTemplate = require('../templates/directory.js');
+const errorTemplate = require('../templates/error.js');
+
+debug(`directoryTemplate: ${JSON.stringify(directoryTemplate, null, 2)}`);
 
 const etags = new Map();
 
-const calculateSha = (handlers, absolutePath) =>
+const calculateSha = (handlers: any, absolutePath: string) =>
     new Promise((resolve, reject) => {
+        debug(`calculateSha()`);
         const hash = createHash('sha1');
         hash.update(path.extname(absolutePath));
         hash.update('-');
@@ -36,12 +41,15 @@ const calculateSha = (handlers, absolutePath) =>
         });
     });
 
-const sourceMatches = (source: any, requestPath: any, allowSegments?: any) => {
+const sourceMatches = (source: any, requestPath: any, allowSegments: boolean = false) => {
     const keys = [];
     const slashed = slasher(source);
+
     const resolvedPath = path.posix.resolve(requestPath);
 
     let results = null;
+
+
 
     if (allowSegments) {
         const normalized = slashed.replace('*', '(.*)');
@@ -68,6 +76,7 @@ const sourceMatches = (source: any, requestPath: any, allowSegments?: any) => {
 };
 
 const toTarget = (source: any, destination: any, previousPath: any) => {
+    debug(`toTarget()`);
     const matches = sourceMatches(source, previousPath, true);
 
     if (!matches) {
@@ -90,6 +99,7 @@ const toTarget = (source: any, destination: any, previousPath: any) => {
 };
 
 const applyRewrites = (requestPath: any, rewrites: any[] = [], repetitive?: any) => {
+    debug(`applyRewrites()`);
     // We need to copy the array, since we're going to modify it.
     const rewritesCopy = rewrites.slice();
 
@@ -117,9 +127,10 @@ const applyRewrites = (requestPath: any, rewrites: any[] = [], repetitive?: any)
     return fallback;
 };
 
-const ensureSlashStart = target => (target.startsWith('/') ? target : `/${target}`);
+const ensureSlashStart = (target: string) => (target.startsWith('/') ? target : `/${target}`);
 
 const shouldRedirect = (decodedPath, { redirects = [], trailingSlash }, cleanUrl) => {
+    debug(`shouldRedirect()`);
     const slashing = typeof trailingSlash === 'boolean';
     const defaultType = 301;
     const matchHTML = /(\.html|\/index)$/g;
@@ -189,13 +200,15 @@ const shouldRedirect = (decodedPath, { redirects = [], trailingSlash }, cleanUrl
 };
 
 const appendHeaders = (target, source) => {
+    debug(`appendHeaders()`);
     for (let index = 0; index < source.length; index++) {
         const { key, value } = source[index];
         target[key] = value;
     }
 };
 
-const getHeaders = async (handlers, config, current, absolutePath, stats) => {
+const getHeaders = async (handlers: any, config: any, current: any, absolutePath: any, stats: any) => {
+    debug(`getHeaders()`);
     const { headers: customHeaders = [], etag = false } = config;
     const related = {};
     const { base } = path.parse(absolutePath);
@@ -282,17 +295,20 @@ const getPossiblePaths = (relativePath, extension) => [
     relativePath.endsWith('/') ? relativePath.replace(/\/$/g, extension) : (relativePath + extension)
 ].filter(item => path.basename(item) !== extension);
 
-const findRelated = async (current, relativePath, rewrittenPath, originalStat) => {
+const findRelated = async (current: string, relativePath: string, rewrittenPath: string, originalStat: any) => {
+    debug(`findRelated()`);
     const possible = rewrittenPath ? [rewrittenPath] : getPossiblePaths(relativePath, '.html');
 
     let stats = null;
 
+    debug(`possible: ${JSON.stringify(possible)}`);
     for (let index = 0; index < possible.length; index++) {
         const related = possible[index];
         const absolutePath = path.join(current, related);
 
         try {
             stats = await originalStat(absolutePath);
+            debug(`stats: ${JSON.stringify(stats)}`);
         } catch (err) {
             if (err.code !== 'ENOENT' && err.code !== 'ENOTDIR') {
                 throw err;
@@ -310,7 +326,8 @@ const findRelated = async (current, relativePath, rewrittenPath, originalStat) =
     return null;
 };
 
-const canBeListed = (excluded, file) => {
+const canBeListed = (excluded: any, file: string) => {
+    debug(`canBeListed()`);
     const slashed = slasher(file);
     let whether = true;
 
@@ -326,7 +343,8 @@ const canBeListed = (excluded, file) => {
     return whether;
 };
 
-const renderDirectory = async (current, acceptsJSON, handlers, methods, config, paths) => {
+const renderDirectory = async (current: string, acceptsJSON: boolean, handlers, methods, config, paths) => {
+    debug(`renderDirectory()`);
     const { directoryListing, trailingSlash, unlisted = [], renderSingle } = config;
     const slashSuffix = typeof trailingSlash === 'boolean' ? (trailingSlash ? '/' : '') : '/';
     const { relativePath, absolutePath } = paths;
@@ -341,7 +359,10 @@ const renderDirectory = async (current, acceptsJSON, handlers, methods, config, 
         return {};
     }
 
+    debug(`handlers readdir absolutePath: ${absolutePath}`);
+    debug(`handlers: ${JSON.stringify(absolutePath)}`);
     let files = await handlers.readdir(absolutePath);
+    debug(`files: ${JSON.stringify(files)}`);
 
     const canRenderSingle = renderSingle && (files.length === 1);
 
@@ -465,10 +486,18 @@ const renderDirectory = async (current, acceptsJSON, handlers, methods, config, 
 
     const output = acceptsJSON ? JSON.stringify(spec) : directoryTemplate(spec);
 
+
+    debug(`spec: ${JSON.stringify(spec, null, 2)}`);
+    debug(`files: ${JSON.stringify(files)}`);
+    debug(`directory: ${directory}`)
+    debug(`paths: ${JSON.stringify(paths)}`);
+    debug(`output: ${output}`)
+
     return { directory: output };
 };
 
 const sendError = async (absolutePath: any, response: any, acceptsJSON: boolean, current: any, handlers: any, config: any, spec: any) => {
+    debug(`sendError`);
     const { err: original, message, code, statusCode } = spec;
 
     /* istanbul ignore next */
@@ -528,6 +557,7 @@ const sendError = async (absolutePath: any, response: any, acceptsJSON: boolean,
 };
 
 const internalError = async (absolutePath: any, response: any, acceptsJSON: any, current: any, handlers: any, config: any, err: any) => {
+    debug(`internalError`);
 
     err = {
         statusCode: 500,
@@ -539,7 +569,7 @@ const internalError = async (absolutePath: any, response: any, acceptsJSON: any,
     return sendError(absolutePath, response, acceptsJSON, current, handlers, config, err);
 };
 
-const getHandlers = methods => Object.assign({
+const getHandlers = (methods: any) => Object.assign({
     lstat: promisify(lstat),
     realpath: promisify(realpath),
     createReadStream,
@@ -548,7 +578,7 @@ const getHandlers = methods => Object.assign({
 }, methods);
 
 module.exports = async (request: any, response: any, config: any = {}, methods: any = {}) => {
-    const cwd = process.cwd();
+    const cwd: string = process.cwd();
     const current = config.publicStuff ? path.resolve(cwd, config.publicStuff) : cwd;
     const handlers = getHandlers(methods);
 

@@ -17,7 +17,7 @@ import checkForUpdate from '../helpers/update-check';
 import chalk from 'chalk';
 import arg from '../helpers/arg';
 import handler from '../serve-handler';
-import schema from '../templates/config-static'
+import schema from '../helpers/config-static'
 import compression from 'compression';
 
 // Utilities
@@ -269,11 +269,9 @@ const startEndpoint = (endpoint: any, config: any, args: any, previous?: any) =>
     });
 };
 
-const loadConfig = async (cwd, entry, args) => {
+const loadConfig = async (cwd: string, entry, args) => {
     const files = [
-        'serve.json',
-        'now.json',
-        'package.json'
+        'ce.json'
     ];
 
     if (args['--config']) {
@@ -416,7 +414,7 @@ const loadConfig = async (cwd, entry, args) => {
         process.exit(1);
     }
 
-    const cwd = process.cwd();
+    const cwd: string = process.cwd();
     const entry = args._.length > 0 ? path.resolve(args._[0]) : cwd;
 
     const config = await loadConfig(cwd, entry, args);
