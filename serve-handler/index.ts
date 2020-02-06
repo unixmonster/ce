@@ -16,16 +16,6 @@ import isPathInside from 'path-is-inside';
 import parseRange from 'range-parser';
 import Debug from "debug";
 
-const debug = Debug('serve-handler');
-
-// Other
-const directoryTemplate = require('../templates/directory.js');
-const errorTemplate = require('../templates/error.js');
-
-debug(`directoryTemplate: ${JSON.stringify(directoryTemplate, null, 2)}`);
-
-const etags = new Map();
-
 const calculateSha = (handlers: any, absolutePath: string) =>
     new Promise((resolve, reject) => {
         debug(`calculateSha()`);
@@ -40,6 +30,15 @@ const calculateSha = (handlers: any, absolutePath: string) =>
             resolve(sha);
         });
     });
+
+
+const debug = Debug('serve-handler');
+
+// Other
+const directoryTemplate = require('../templates/directory.js');
+const errorTemplate = require('../templates/error.js');
+
+const etags = new Map();
 
 const sourceMatches = (source: any, requestPath: any, allowSegments: boolean = false) => {
     const keys = [];
@@ -577,217 +576,228 @@ const getHandlers = (methods: any) => Object.assign({
     sendError
 }, methods);
 
-module.exports = async (request: any, response: any, config: any = {}, methods: any = {}) => {
-    const cwd: string = process.cwd();
-    const current = config.publicStuff ? path.resolve(cwd, config.publicStuff) : cwd;
-    const handlers = getHandlers(methods);
 
-    let relativePath = null;
-    let acceptsJSON = null;
+class ceHandler {
 
-    if (request.headers.accept) {
-        acceptsJSON = request.headers.accept.includes('application/json');
+    constructor(request, response: any, config: any = {}, methods: any = {}) {
+
+        this.setup(request, response, config, methods);
+
     }
 
-    try {
-        relativePath = decodeURIComponent(url(request.url).pathname);
-    } catch (err) {
-        return sendError('/', response, acceptsJSON, current, handlers, config, {
-            statusCode: 400,
-            code: 'bad_request',
-            message: 'Bad Request'
-        });
-    }
+    private async setup(request, response: any, config: any = {}, methods: any = {}): Promise<any> {
+        const cwd: string = process.cwd();
+        const current = config.publicStuff ? path.resolve(cwd, config.publicStuff) : cwd;
+        const handlers = getHandlers(methods);
 
-    let absolutePath = path.join(current, relativePath);
+        let relativePath = null;
+        let acceptsJSON = null;
 
-    // Prevent path traversal vulnerabilities. We could do this
-    // by ourselves, but using the package covers all the edge cases.
-    if (!isPathInside(absolutePath, current)) {
-        return sendError(absolutePath, response, acceptsJSON, current, handlers, config, {
-            statusCode: 400,
-            code: 'bad_request',
-            message: 'Bad Request'
-        });
-    }
-
-    const cleanUrl = applicable(relativePath, config.cleanUrls);
-    const redirect = shouldRedirect(relativePath, config, cleanUrl);
-
-    if (redirect) {
-        response.writeHead(redirect.statusCode, {
-            Location: encodeURI(redirect.target)
-        });
-
-        response.end();
-        return;
-    }
-
-    let stats = null;
-
-    // It's extremely important that we're doing multiple stat calls. This one
-    // right here could technically be removed, but then the program
-    // would be slower. Because for directories, we always want to see if a related file
-    // exists and then (after that), fetch the directory itself if no
-    // related file was found. However (for files, of which most have extensions), we should
-    // always stat right away.
-    //
-    // When simulating a file system without directory indexes, calculating whether a
-    // directory exists requires loading all the file paths and then checking if
-    // one of them includes the path of the directory. As that's a very
-    // performance-expensive thing to do, we need to ensure it's not happening if not really necessary.
-
-    if (path.extname(relativePath) !== '') {
-        try {
-            stats = await handlers.lstat(absolutePath);
-        } catch (err) {
-            if (err.code !== 'ENOENT' && err.code !== 'ENOTDIR') {
-                return internalError(absolutePath, response, acceptsJSON, current, handlers, config, err);
-            }
+        if (request.headers.accept) {
+            acceptsJSON = request.headers.accept.includes('application/json');
         }
-    }
 
-    const rewrittenPath = applyRewrites(relativePath, config.rewrites);
-
-    if (!stats && (cleanUrl || rewrittenPath)) {
         try {
-            const related = await findRelated(current, relativePath, rewrittenPath, handlers.lstat);
-
-            if (related) {
-                ({ stats, absolutePath } = related);
-            }
+            relativePath = decodeURIComponent(url(request.url).pathname);
         } catch (err) {
-            if (err.code !== 'ENOENT' && err.code !== 'ENOTDIR') {
-                return internalError(absolutePath, response, acceptsJSON, current, handlers, config, err);
-            }
+            return sendError('/', response, acceptsJSON, current, handlers, config, {
+                statusCode: 400,
+                code: 'bad_request',
+                message: 'Bad Request'
+            });
         }
-    }
 
-    if (!stats) {
-        try {
-            stats = await handlers.lstat(absolutePath);
-        } catch (err) {
-            if (err.code !== 'ENOENT' && err.code !== 'ENOTDIR') {
-                return internalError(absolutePath, response, acceptsJSON, current, handlers, config, err);
-            }
+        let absolutePath = path.join(current, relativePath);
+
+        // Prevent path traversal vulnerabilities. We could do this
+        // by ourselves, but using the package covers all the edge cases.
+        if (!isPathInside(absolutePath, current)) {
+            return sendError(absolutePath, response, acceptsJSON, current, handlers, config, {
+                statusCode: 400,
+                code: 'bad_request',
+                message: 'Bad Request'
+            });
         }
-    }
 
-    if (stats && stats.isDirectory()) {
-        let directory = null;
-        let singleFile = null;
+        const cleanUrl = applicable(relativePath, config.cleanUrls);
+        const redirect = shouldRedirect(relativePath, config, cleanUrl);
 
-        try {
-            const related = await renderDirectory(current, acceptsJSON, handlers, methods, config, {
-                relativePath,
-                absolutePath
+        if (redirect) {
+            response.writeHead(redirect.statusCode, {
+                Location: encodeURI(redirect.target)
             });
 
-            if (related.singleFile) {
-                ({ stats, absolutePath, singleFile } = related);
-            } else {
-                ({ directory } = related);
-            }
-        } catch (err) {
-            if (err.code !== 'ENOENT') {
-                return internalError(absolutePath, response, acceptsJSON, current, handlers, config, err);
+            response.end();
+            return;
+        }
+
+        let stats = null;
+
+        // It's extremely important that we're doing multiple stat calls. This one
+        // right here could technically be removed, but then the program
+        // would be slower. Because for directories, we always want to see if a related file
+        // exists and then (after that), fetch the directory itself if no
+        // related file was found. However (for files, of which most have extensions), we should
+        // always stat right away.
+        //
+        // When simulating a file system without directory indexes, calculating whether a
+        // directory exists requires loading all the file paths and then checking if
+        // one of them includes the path of the directory. As that's a very
+        // performance-expensive thing to do, we need to ensure it's not happening if not really necessary.
+
+        if (path.extname(relativePath) !== '') {
+            try {
+                stats = await handlers.lstat(absolutePath);
+            } catch (err) {
+                if (err.code !== 'ENOENT' && err.code !== 'ENOTDIR') {
+                    return internalError(absolutePath, response, acceptsJSON, current, handlers, config, err);
+                }
             }
         }
 
-        if (directory) {
-            const contentType = acceptsJSON ? 'application/json; charset=utf-8' : 'text/html; charset=utf-8';
+        const rewrittenPath = applyRewrites(relativePath, config.rewrites);
 
-            response.statusCode = 200;
-            response.setHeader('Content-Type', contentType);
-            response.end(directory);
+        if (!stats && (cleanUrl || rewrittenPath)) {
+            try {
+                const related = await findRelated(current, relativePath, rewrittenPath, handlers.lstat);
+
+                if (related) {
+                    ({ stats, absolutePath } = related);
+                }
+            } catch (err) {
+                if (err.code !== 'ENOENT' && err.code !== 'ENOTDIR') {
+                    return internalError(absolutePath, response, acceptsJSON, current, handlers, config, err);
+                }
+            }
+        }
+
+        if (!stats) {
+            try {
+                stats = await handlers.lstat(absolutePath);
+            } catch (err) {
+                if (err.code !== 'ENOENT' && err.code !== 'ENOTDIR') {
+                    return internalError(absolutePath, response, acceptsJSON, current, handlers, config, err);
+                }
+            }
+        }
+
+        if (stats && stats.isDirectory()) {
+            let directory = null;
+            let singleFile = null;
+
+            try {
+                const related = await renderDirectory(current, acceptsJSON, handlers, methods, config, {
+                    relativePath,
+                    absolutePath
+                });
+
+                if (related.singleFile) {
+                    ({ stats, absolutePath, singleFile } = related);
+                } else {
+                    ({ directory } = related);
+                }
+            } catch (err) {
+                if (err.code !== 'ENOENT') {
+                    return internalError(absolutePath, response, acceptsJSON, current, handlers, config, err);
+                }
+            }
+
+            if (directory) {
+                const contentType = acceptsJSON ? 'application/json; charset=utf-8' : 'text/html; charset=utf-8';
+
+                response.statusCode = 200;
+                response.setHeader('Content-Type', contentType);
+                response.end(directory);
+
+                return;
+            }
+
+            if (!singleFile) {
+                // The directory listing is disabled, so we want to
+                // render a 404 error.
+                stats = null;
+            }
+        }
+
+        const isSymLink = stats && stats.isSymbolicLink();
+
+        // There are two scenarios in which we want to reply with
+        // a 404 error: Either the path does not exist, or it is a
+        // symlink while the `symlinks` option is disabled (which it is by default).
+        if (!stats || (!config.symlinks && isSymLink)) {
+            // allow for custom 404 handling
+            return handlers.sendError(absolutePath, response, acceptsJSON, current, handlers, config, {
+                statusCode: 404,
+                code: 'not_found',
+                message: 'The requested path could not be found'
+            });
+        }
+
+        // If we figured out that the target is a symlink, we need to
+        // resolve the symlink and run a new `stat` call just for the
+        // target of that symlink.
+        if (isSymLink) {
+            absolutePath = await handlers.realpath(absolutePath);
+            stats = await handlers.lstat(absolutePath);
+        }
+
+        const streamOpts = {
+            start: null,
+            end: null
+        };
+
+        // TODO ? if-range
+        if (request.headers.range && stats.size) {
+            const range = parseRange(stats.size, request.headers.range);
+
+            if (typeof range === 'object' && range.type === 'bytes') {
+                const { start, end } = range[0];
+
+                streamOpts.start = start;
+                streamOpts.end = end;
+
+                response.statusCode = 206;
+            } else {
+                response.statusCode = 416;
+                response.setHeader('Content-Range', `bytes */${stats.size}`);
+            }
+        }
+
+        // TODO ? multiple ranges
+
+        let stream = null;
+
+        try {
+            stream = await handlers.createReadStream(absolutePath, streamOpts);
+        } catch (err) {
+            return internalError(absolutePath, response, acceptsJSON, current, handlers, config, err);
+        }
+
+        const headers: any = await getHeaders(handlers, config, current, absolutePath, stats);
+
+        // eslint-disable-next-line no-undefined
+        if (streamOpts.start !== undefined && streamOpts.end !== undefined) {
+            headers['Content-Range'] = `bytes ${streamOpts.start}-${streamOpts.end}/${stats.size}`;
+            headers['Content-Length'] = streamOpts.end - streamOpts.start + 1;
+        }
+
+        // We need to check for `headers.ETag` being truthy first, otherwise it will
+        // match `undefined` being equal to `undefined`, which is true.
+        //
+        // Checking for `undefined` and `null` is also important, because `Range` can be `0`.
+        //
+        // eslint-disable-next-line no-eq-null
+        if (request.headers.range == null && headers.ETag && headers.ETag === request.headers['if-none-match']) {
+            response.statusCode = 304;
+            response.end();
 
             return;
         }
 
-        if (!singleFile) {
-            // The directory listing is disabled, so we want to
-            // render a 404 error.
-            stats = null;
-        }
-    }
-
-    const isSymLink = stats && stats.isSymbolicLink();
-
-    // There are two scenarios in which we want to reply with
-    // a 404 error: Either the path does not exist, or it is a
-    // symlink while the `symlinks` option is disabled (which it is by default).
-    if (!stats || (!config.symlinks && isSymLink)) {
-        // allow for custom 404 handling
-        return handlers.sendError(absolutePath, response, acceptsJSON, current, handlers, config, {
-            statusCode: 404,
-            code: 'not_found',
-            message: 'The requested path could not be found'
-        });
-    }
-
-    // If we figured out that the target is a symlink, we need to
-    // resolve the symlink and run a new `stat` call just for the
-    // target of that symlink.
-    if (isSymLink) {
-        absolutePath = await handlers.realpath(absolutePath);
-        stats = await handlers.lstat(absolutePath);
-    }
-
-    const streamOpts = {
-        start: null,
-        end: null
+        response.writeHead(response.statusCode || 200, headers);
+        stream.pipe(response);
     };
 
-    // TODO ? if-range
-    if (request.headers.range && stats.size) {
-        const range = parseRange(stats.size, request.headers.range);
+}
 
-        if (typeof range === 'object' && range.type === 'bytes') {
-            const { start, end } = range[0];
-
-            streamOpts.start = start;
-            streamOpts.end = end;
-
-            response.statusCode = 206;
-        } else {
-            response.statusCode = 416;
-            response.setHeader('Content-Range', `bytes */${stats.size}`);
-        }
-    }
-
-    // TODO ? multiple ranges
-
-    let stream = null;
-
-    try {
-        stream = await handlers.createReadStream(absolutePath, streamOpts);
-    } catch (err) {
-        return internalError(absolutePath, response, acceptsJSON, current, handlers, config, err);
-    }
-
-    const headers: any = await getHeaders(handlers, config, current, absolutePath, stats);
-
-    // eslint-disable-next-line no-undefined
-    if (streamOpts.start !== undefined && streamOpts.end !== undefined) {
-        headers['Content-Range'] = `bytes ${streamOpts.start}-${streamOpts.end}/${stats.size}`;
-        headers['Content-Length'] = streamOpts.end - streamOpts.start + 1;
-    }
-
-    // We need to check for `headers.ETag` being truthy first, otherwise it will
-    // match `undefined` being equal to `undefined`, which is true.
-    //
-    // Checking for `undefined` and `null` is also important, because `Range` can be `0`.
-    //
-    // eslint-disable-next-line no-eq-null
-    if (request.headers.range == null && headers.ETag && headers.ETag === request.headers['if-none-match']) {
-        response.statusCode = 304;
-        response.end();
-
-        return;
-    }
-
-    response.writeHead(response.statusCode || 200, headers);
-    stream.pipe(response);
-};
-
-export = module.exports;
+export = ceHandler;

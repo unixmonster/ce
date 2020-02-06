@@ -20,8 +20,72 @@ import handler from '../serve-handler';
 import schema from '../helpers/config-static'
 import compression from 'compression';
 
+import { ChromeLaunchOptions, launchChrome } from '../helpers/chrome';
+
+import Debug from 'debug';
+
+const debug = Debug('ce.ts');
+
 // Utilities
 import pkg from '../package.json';
+
+const chromeOpts: ChromeLaunchOptions = {
+
+    //port: 9996,
+    //chromeFlags: ['--disable-extensions'],
+    // handleSIGINT: true,
+    handleSIGINT: true,
+    //chromePath: "",
+    userDataDir: false,
+    startingUrl: 'http://localdev.fvdev.com:5000',
+    // logLevel: 'verbose' | 'info' | 'error' | 'silent';
+    logLevel: 'error',
+    ignoreDefaultFlags: false,
+    connectionPollInterval: 500,
+    maxConnectionRetries: 50,
+
+    // (optional) A dict of environmental key value pairs to pass to the spawned chrome process.
+    //envVars: { [key: string]: string };
+    //envVars: {}
+}
+
+/*
+launchChrome(chromeOpts, true).then((chrome) => {
+
+    // try {
+    console.log('LAUNCHING_CHROME HeadLess');
+
+    // The remote debugging port exposed by the launched chrome
+    console.log(`launched chrome on port: ${chrome.port}`);
+
+    // Method to kill Chrome (and cleanup the profile folder)
+    //chrome.kill: () => Promise<{}>;
+
+    // The process id
+    console.log(`chrome is using process.pid: ${chrome.pid}`);
+
+    // The childProcess object for the launched Chrome
+    // console.log(`chrome childProcess: ${JSON.stringify(chrome.process, null, 2)}`);
+
+    return chrome;
+
+});
+
+*/
+
+
+launchChrome(chromeOpts).then((chrome) => {
+    // try {
+    console.log('LAUNCHING_CHROME');
+    console.log(`launched chrome on port: ${chrome.port}`);
+    console.log(`chrome is using process.pid: ${chrome.pid}`);
+    // console.log(`chrome childProcess: ${JSON.stringify(chrome.process, null, 2)}`);
+    return chrome;
+
+    // } catch (error) {
+    //     return Error
+    // }
+});
 
 const readFile = promisify(fs.readFile);
 const compressionHandler = promisify(compression());
@@ -117,8 +181,8 @@ const getHelp = () => chalk`
           {bold $} {cyan ce} -l pipe:\\\\.\\pipe\\{underline PipeName}
 `;
 
-const parseEndpoint = (str: string) => {
-    if (!isNaN(Number(str))) {
+const parseEndpoint = (str: any) => {
+    if (!isNaN(str)) {
         return [str];
     }
 
@@ -178,6 +242,7 @@ const getNetworkAddress = () => {
 };
 
 const startEndpoint = (endpoint: any, config: any, args: any, previous?: any) => {
+    debug(`ce:startEndpoint`);
     const { isTTY } = process.stdout;
     const clipboard = args['--no-clipboard'] !== true;
     const compress = args['--no-compression'] !== true;
@@ -191,7 +256,7 @@ const startEndpoint = (endpoint: any, config: any, args: any, previous?: any) =>
             await compressionHandler(request, response);
         }
 
-        return handler(request, response, config);
+        return new handler(request, response, config);
     };
 
     const server = httpMode === 'https'
