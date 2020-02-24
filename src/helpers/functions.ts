@@ -1,7 +1,9 @@
 
 import { createHash } from 'crypto';
 import * as path from 'path';
+import Debug from './debug'
 
+const debug = Debug('functions')
 
 /**
  *      c a l c u l a t e S h a

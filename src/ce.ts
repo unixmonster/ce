@@ -20,7 +20,7 @@ import compression from 'compression';
 
 import { ChromeLaunchOptions, launchChrome } from './helpers/chrome';
 
-import Debug from 'debug';
+import Debug from './helpers/debug';
 
 const debug = Debug('ce.ts');
 
