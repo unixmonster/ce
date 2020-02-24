@@ -13,14 +13,14 @@ import os from 'os';
 import Ajv from 'ajv';
 import boxen from 'boxen';
 import clipboardy from 'clipboardy';
-import checkForUpdate from '../helpers/update-check';
+import checkForUpdate from './helpers/update-check';
 import chalk from 'chalk';
-import arg from '../helpers/arg';
-import handler from '../serve-handler';
-import schema from '../helpers/config-static'
+import arg from './helpers/arg';
+import ceHandler from './helpers/ceHandler';
+import schema from './helpers/config-static'
 import compression from 'compression';
 
-import { ChromeLaunchOptions, launchChrome } from '../helpers/chrome';
+import { ChromeLaunchOptions, launchChrome } from './helpers/chrome';
 
 import Debug from 'debug';
 
@@ -97,6 +97,7 @@ const info = (message: string) => chalk`{magenta INFO:} ${message}`;
 const error = (message: string) => chalk`{red ERROR:} ${message}`;
 
 const updateCheck = async (isDebugging: boolean) => {
+    debug(`ce:updateCheck()`);
     let update = null;
 
     try {
@@ -182,6 +183,7 @@ const getHelp = () => chalk`
 `;
 
 const parseEndpoint = (str: any) => {
+    debug(`ce:parseEndpoint()`);
     if (!isNaN(str)) {
         return [str];
     }
@@ -216,6 +218,7 @@ const parseEndpoint = (str: any) => {
 };
 
 const registerShutdown = (fn: any) => {
+    debug(`ce:registerShutdown()`);
     let run = false;
 
     const wrapper = () => {
@@ -231,6 +234,7 @@ const registerShutdown = (fn: any) => {
 };
 
 const getNetworkAddress = () => {
+    debug(`ce:getNetworkAddress()`);
     for (const name of Object.keys(interfaces)) {
         for (const _interface of interfaces[name]) {
             const { address, family, internal } = _interface;
@@ -256,7 +260,7 @@ const startEndpoint = (endpoint: any, config: any, args: any, previous?: any) =>
             await compressionHandler(request, response);
         }
 
-        return new handler(request, response, config);
+        return new ceHandler(request, response, config);
     };
 
     const server = httpMode === 'https'
@@ -335,6 +339,7 @@ const startEndpoint = (endpoint: any, config: any, args: any, previous?: any) =>
 };
 
 const loadConfig = async (cwd: string, entry, args) => {
+    debug(`ce:loadConfig()`);
     const files = [
         'ce.json'
     ];

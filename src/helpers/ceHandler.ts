@@ -6,7 +6,7 @@ import { realpath, lstat, createReadStream, readdir } from 'fs';
 
 // Packages
 import url from 'url-parse';
-import slasher from '../helpers/glob-slash';
+import slasher from './glob-slash';
 import minimatch from 'minimatch';
 import { pathToRegexp, compile as regexCompile } from 'path-to-regexp';
 import mime from 'mime-types';
@@ -15,6 +15,8 @@ import contentDisposition from 'content-disposition';
 import isPathInside from 'path-is-inside';
 import parseRange from 'range-parser';
 import Debug from "debug";
+
+const debug = Debug('ceHandler');
 
 const calculateSha = (handlers: any, absolutePath: string) =>
     new Promise((resolve, reject) => {
@@ -32,7 +34,6 @@ const calculateSha = (handlers: any, absolutePath: string) =>
     });
 
 
-const debug = Debug('serve-handler');
 
 // Other
 const directoryTemplate = require('../templates/directory.js');
@@ -41,6 +42,7 @@ const errorTemplate = require('../templates/error.js');
 const etags = new Map();
 
 const sourceMatches = (source: any, requestPath: any, allowSegments: boolean = false) => {
+    debug(`sourceMatches()`);
     const keys = [];
     const slashed = slasher(source);
 
@@ -270,6 +272,7 @@ const getHeaders = async (handlers: any, config: any, current: any, absolutePath
 };
 
 const applicable = (decodedPath, configEntry) => {
+    debug(`applicable()`);
     if (typeof configEntry === 'boolean') {
         return configEntry;
     }
@@ -296,6 +299,12 @@ const getPossiblePaths = (relativePath, extension) => [
 
 const findRelated = async (current: string, relativePath: string, rewrittenPath: string, originalStat: any) => {
     debug(`findRelated()`);
+
+    debug(`current: ${JSON.stringify(current)}`);
+    debug(`relativePath: ${JSON.stringify(relativePath)}`);
+    debug(`rewrittentPath: ${JSON.stringify(rewrittenPath)}`);
+    debug(`originalStat: ${JSON.stringify(originalStat)}`);
+
     const possible = rewrittenPath ? [rewrittenPath] : getPossiblePaths(relativePath, '.html');
 
     let stats = null;
@@ -496,12 +505,19 @@ const renderDirectory = async (current: string, acceptsJSON: boolean, handlers, 
 };
 
 const sendError = async (absolutePath: any, response: any, acceptsJSON: boolean, current: any, handlers: any, config: any, spec: any) => {
-    debug(`sendError`);
-    const { err: original, message, code, statusCode } = spec;
+    debug(`-= sendError =-`);
+    debug(`absolutePath: ${JSON.stringify(absolutePath, null, 2)}`);
+    debug(`response: ${response}`);
+    debug(`acceptsJSON: ${JSON.stringify(acceptsJSON, null, 2)}`);
+    debug(`current: ${JSON.stringify(current, null, 2)}`);
+    debug(`handlers: ${JSON.stringify(handlers, null, 2)}`);
+    debug(`config: ${JSON.stringify(config, null, 2)}`);
+    debug(`spec: ${JSON.stringify(spec, null, 2)}`);
 
-    /* istanbul ignore next */
-    if (original && process.env.NODE_ENV !== 'test') {
-        console.error(original);
+    const { message, code, statusCode } = spec;
+
+    if (typeof message !== 'undefined' && process.env.NODE_ENV !== 'test') {
+        console.log(message)
     }
 
     response.statusCode = statusCode;
@@ -586,6 +602,7 @@ class ceHandler {
     }
 
     private async setup(request, response: any, config: any = {}, methods: any = {}): Promise<any> {
+        debug(`ceHandler:setup`);
         const cwd: string = process.cwd();
         const current = config.publicStuff ? path.resolve(cwd, config.publicStuff) : cwd;
         const handlers = getHandlers(methods);
@@ -800,4 +817,4 @@ class ceHandler {
 
 }
 
-export = ceHandler;
+export default ceHandler;
