@@ -1,7 +1,6 @@
 // Native
 import { promisify } from 'util';
 import path from 'path';
-import { createHash } from 'crypto';
 import { realpath, lstat, createReadStream, readdir } from 'fs';
 
 // Packages
@@ -16,22 +15,11 @@ import isPathInside from 'path-is-inside';
 import parseRange from 'range-parser';
 import Debug from "debug";
 
+import { ensureSlashStart, calculateSha } from './functions'
+
 const debug = Debug('ceHandler');
 
-const calculateSha = (handlers: any, absolutePath: string) =>
-    new Promise((resolve, reject) => {
-        debug(`calculateSha()`);
-        const hash = createHash('sha1');
-        hash.update(path.extname(absolutePath));
-        hash.update('-');
-        const rs = handlers.createReadStream(absolutePath);
-        rs.on('error', reject);
-        rs.on('data', buf => hash.update(buf));
-        rs.on('end', () => {
-            const sha = hash.digest('hex');
-            resolve(sha);
-        });
-    });
+
 
 
 
@@ -128,7 +116,7 @@ const applyRewrites = (requestPath: any, rewrites: any[] = [], repetitive?: any)
     return fallback;
 };
 
-const ensureSlashStart = (target: string) => (target.startsWith('/') ? target : `/${target}`);
+
 
 const shouldRedirect = (decodedPath, { redirects = [], trailingSlash }, cleanUrl) => {
     debug(`shouldRedirect()`);

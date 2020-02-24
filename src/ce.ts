@@ -1,5 +1,3 @@
-#!/usr/bin/env node
-
 // Native
 import http from 'http';
 import https from 'https';
