@@ -5,11 +5,11 @@
   "scripts": {
     "prebuild": "rm -rf dist",
     "build": "tsc && npm run build-views",
-    "debug": "ts-node ./src/ce.ts",
+    "debug": "DEBUG=* ts-node ./src/ce.ts",
     "prebinary": "npm run build && pushd dist && NODE_ENV=production npm install && chmod u+x ./src/ce.js",
     "doinstall": "npm run prebinary && pushd dist && NODE_ENV=production npm link",
     "prepublishOnly": "npm run build",
-    "build-views": "npx dottojs -s ./templates -d ./dist/templates && npx dottojs -s ./templates -d ./templates",
+    "build-views": "npx dottojs -s ./src/templates -d ./dist/templates && npx dottojs -s ./src/templates -d ./src/templates",
     "lint": "eslint --ext .ts ."
   },
   "files": [
