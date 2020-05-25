@@ -1,6 +1,5 @@
 // Native
 import { URL } from 'url';
-import http from 'http';
 import { join } from 'path';
 import fs, { PathLike } from 'fs';
 import { promisify } from 'util';
@@ -9,6 +8,16 @@ import { tmpdir } from 'os';
 // Packages
 import registryUrl from 'registry-url';
 
+// Debug Setup
+import Debug from 'debug';
+const debug = Debug('update-check.ts')
+
+
+/**
+ *
+ *      V A R I A B L E S
+ *
+ */
 interface updateConfig {
     interval: number;
     distTag: string;
@@ -207,5 +216,7 @@ module.exports = async (pkg: any, config: any) => {
 
     return null;
 };
+
+// Exports
 
 export = module.exports
