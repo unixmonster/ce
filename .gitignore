@@ -5,3 +5,4 @@ dist
 package-lock.json
 templates/directory.js
 templates/error.js
+.idea
