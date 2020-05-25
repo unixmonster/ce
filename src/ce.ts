@@ -5,27 +5,35 @@ import path from 'path';
 import fs from 'fs';
 import { promisify } from 'util';
 import { parse } from 'url';
-import os from 'os';
 
 // Packages
 import Ajv from 'ajv';
 import boxen from 'boxen';
-import clipboardy from 'clipboardy';
-import checkForUpdate from './helpers/update-check';
-import chalk from 'chalk';
-import arg from './helpers/arg';
-import ceHandler from './helpers/ceHandler';
-import schema from './helpers/config-static'
 import compression from 'compression';
+import chalk from 'chalk';
+import clipboardy from 'clipboardy';
 
+// Supplied in this code base
+import arg from './helpers/arg';
+import * as schema from './helpers/config-static'
+import ceHandler from './helpers/ceHandler';
+import { getNetworkAddress } from './helpers/functions'
+import { error, getHelp, info, pkg, warning, updateCheck } from './helpers/info'
 import { ChromeLaunchOptions, launchChrome } from './helpers/chrome';
 
-import Debug from './helpers/debug';
-
+// Debug Setup
+import Debug from 'debug';
 const debug = Debug('ce.ts');
 
-// Utilities
-import pkg from '../package.json';
+
+
+/**
+ *
+ *      V A R I A B L E S
+ *
+ */
+const readFile = promisify(fs.readFile);
+const compressionHandler = promisify(compression());
 
 const chromeOpts: ChromeLaunchOptions = {
 
@@ -85,101 +93,22 @@ launchChrome(chromeOpts).then((chrome) => {
     // }
 });
 
-const readFile = promisify(fs.readFile);
-const compressionHandler = promisify(compression());
 
-const interfaces = os.networkInterfaces();
 
-const warning = (message: string) => chalk`{yellow WARNING:} ${message}`;
-const info = (message: string) => chalk`{magenta INFO:} ${message}`;
-const error = (message: string) => chalk`{red ERROR:} ${message}`;
 
-const updateCheck = async (isDebugging: boolean) => {
-    debug(`ce:updateCheck()`);
-    let update = null;
 
-    try {
-        update = await checkForUpdate(pkg);
-    } catch (err) {
-        const suffix = isDebugging ? ':' : ' (use `--debug` to see full error)';
-        console.error(warning(`Checking for updates failed${suffix}`));
 
-        if (isDebugging) {
-            console.error(err);
-        }
-    }
 
-    if (!update) {
-        return;
-    }
 
-    console.log(`${chalk.bgRed('UPDATE AVAILABLE')} The latest version of \`ce\` is ${update.latest}`);
-};
 
-const getHelp = () => chalk`
-  {bold.cyan ce} - Static file serving and directory listing
 
-  {bold USAGE}
 
-      {bold $} {cyan ce} --help
-      {bold $} {cyan ce} --version
-      {bold $} {cyan ce} folder_name
-      {bold $} {cyan ce} [-l {underline listen_uri} [-l ...]] [{underline directory}]
 
-      By default, {cyan ce} will listen on {bold 0.0.0.0:5000} and serve the
-      current working directory on that address.
-
-      Specifying a single {bold --listen} argument will overwrite the default, not supplement it.
-
-  {bold OPTIONS}
-
-      --help                              Shows this help message
-
-      -v, --version                       Displays the current version of serve
-
-      -l, --listen {underline listen_uri}             Specify a URI endpoint on which to listen (see below) -
-                                          more than one may be specified to listen in multiple places
-
-      -d, --debug                         Show debugging information
-
-      -s, --single                        Rewrite all not-found requests to \`index.html\`
-
-      -c, --config                        Specify custom path to \`serve.json\`
-
-      -n, --no-clipboard                  Do not copy the local address to the clipboard
-
-      -u, --no-compression                Do not compress files
-
-      --no-etag                           Send \`Last-Modified\` header instead of \`ETag\`
-
-      -S, --symlinks                      Resolve symlinks instead of showing 404 errors
-
-      --ssl-cert                          Optional path to an SSL/TLS certificate to serve with HTTPS
-
-      --ssl-key                           Optional path to the SSL/TLS certificate\'s private key
-
-  {bold ENDPOINTS}
-
-      Listen endpoints (specified by the {bold --listen} or {bold -l} options above) instruct {cyan ce}
-      to listen on one or more interfaces/ports, UNIX domain sockets, or Windows named pipes.
-
-      For TCP ports on hostname "localhost":
-
-          {bold $} {cyan ce} -l {underline 1234}
-
-      For TCP (traditional host/port) endpoints:
-
-          {bold $} {cyan ce} -l tcp://{underline hostname}:{underline 1234}
-
-      For UNIX domain socket endpoints:
-
-          {bold $} {cyan ce} -l unix:{underline /path/to/socket.sock}
-
-      For Windows named pipe endpoints:
-
-          {bold $} {cyan ce} -l pipe:\\\\.\\pipe\\{underline PipeName}
-`;
-
+/**
+ *      p a r s e E n d p o i n t
+ *
+ * @param str
+ */
 const parseEndpoint = (str: any) => {
     debug(`ce:parseEndpoint()`);
     if (!isNaN(str)) {
@@ -215,6 +144,13 @@ const parseEndpoint = (str: any) => {
     }
 };
 
+
+
+/**
+ *      r e g i s t e r  S h u t d o w n
+ *
+ * @param fn
+ */
 const registerShutdown = (fn: any) => {
     debug(`ce:registerShutdown()`);
     let run = false;
@@ -231,18 +167,20 @@ const registerShutdown = (fn: any) => {
     process.on('exit', wrapper);
 };
 
-const getNetworkAddress = () => {
-    debug(`ce:getNetworkAddress()`);
-    for (const name of Object.keys(interfaces)) {
-        for (const _interface of interfaces[name]) {
-            const { address, family, internal } = _interface;
-            if (family === 'IPv4' && !internal) {
-                return address;
-            }
-        }
-    }
-};
 
+
+
+
+
+
+/**
+ *      s t a r t E n d p o i n t
+ *
+ * @param endpoint
+ * @param config
+ * @param args
+ * @param previous
+ */
 const startEndpoint = (endpoint: any, config: any, args: any, previous?: any) => {
     debug(`ce:startEndpoint`);
     const { isTTY } = process.stdout;
@@ -251,6 +189,7 @@ const startEndpoint = (endpoint: any, config: any, args: any, previous?: any) =>
     const httpMode = args['--ssl-cert'] && args['--ssl-key'] ? 'https' : 'http';
 
     const serverHandler = async (request: any, response: any) => {
+        debug(`ce:startEndpoint:serveHandler`);
         if (args['--cors']) {
             response.setHeader('Access-Control-Allow-Origin', '*');
         }
@@ -336,6 +275,14 @@ const startEndpoint = (endpoint: any, config: any, args: any, previous?: any) =>
     });
 };
 
+
+/**
+ *      l o a d C o n f i g
+ *
+ * @param cwd
+ * @param entry
+ * @param args
+ */
 const loadConfig = async (cwd: string, entry, args) => {
     debug(`ce:loadConfig()`);
     const files = [
