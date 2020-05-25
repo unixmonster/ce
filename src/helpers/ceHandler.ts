@@ -3,66 +3,34 @@ import { promisify } from 'util';
 import path from 'path';
 import { realpath, lstat, createReadStream, readdir } from 'fs';
 
+// Supplied in this code base
+
 // Packages
 import url from 'url-parse';
 import slasher from './glob-slash';
-import minimatch from 'minimatch';
 import { pathToRegexp, compile as regexCompile } from 'path-to-regexp';
-import mime from 'mime-types';
 import bytes from 'bytes';
-import contentDisposition from 'content-disposition';
 import isPathInside from 'path-is-inside';
 import parseRange from 'range-parser';
-import Debug from "debug";
 
-import { ensureSlashStart, calculateSha } from './functions'
+import { ensureSlashStart, calculateSha, sourceMatches } from './functions'
 
-const debug = Debug('ceHandler');
+import { getHeaders } from './header'
 
 
+
+// Debug Setup
+import Debug from 'debug';
+const debug = Debug('ceHandler.ts');
 
 
 
 // Other
-const directoryTemplate = require('../templates/directory.js');
-const errorTemplate = require('../templates/error.js');
-
-const etags = new Map();
-
-const sourceMatches = (source: any, requestPath: any, allowSegments: boolean = false) => {
-    debug(`sourceMatches()`);
-    const keys = [];
-    const slashed = slasher(source);
-
-    const resolvedPath = path.posix.resolve(requestPath);
-
-    let results = null;
+import directoryTemplate from '../templates/directory';
+import errorTemplate from '../templates/error';
 
 
 
-    if (allowSegments) {
-        const normalized = slashed.replace('*', '(.*)');
-        const expression = pathToRegexp(normalized, keys);
-
-        results = expression.exec(resolvedPath);
-
-        if (!results) {
-            // clear keys so that they are not used
-            // later with empty results. this may
-            // happen if minimatch returns true
-            keys.length = 0;
-        }
-    }
-
-    if (results || minimatch(resolvedPath, slashed)) {
-        return {
-            keys,
-            results
-        };
-    }
-
-    return null;
-};
 
 const toTarget = (source: any, destination: any, previousPath: any) => {
     debug(`toTarget()`);
@@ -188,76 +156,6 @@ const shouldRedirect = (decodedPath, { redirects = [], trailingSlash }, cleanUrl
     return null;
 };
 
-const appendHeaders = (target, source) => {
-    debug(`appendHeaders()`);
-    for (let index = 0; index < source.length; index++) {
-        const { key, value } = source[index];
-        target[key] = value;
-    }
-};
-
-const getHeaders = async (handlers: any, config: any, current: any, absolutePath: any, stats: any) => {
-    debug(`getHeaders()`);
-    const { headers: customHeaders = [], etag = false } = config;
-    const related = {};
-    const { base } = path.parse(absolutePath);
-    const relativePath = path.relative(current, absolutePath);
-
-    if (customHeaders.length > 0) {
-        // By iterating over all headers and never stopping, developers
-        // can specify multiple header sources in the config that
-        // might match a single path.
-        for (let index = 0; index < customHeaders.length; index++) {
-            const { source, headers } = customHeaders[index];
-
-            if (sourceMatches(source, slasher(relativePath))) {
-                appendHeaders(related, headers);
-            }
-        }
-    }
-
-    let defaultHeaders = {};
-
-    if (stats) {
-        defaultHeaders = {
-            'Content-Length': stats.size,
-            // Default to "inline", which always tries to render in the browser,
-            // if that's not working, it will save the file. But to be clear: This
-            // only happens if it cannot find a appropiate value.
-            'Content-Disposition': contentDisposition(base, {
-                type: 'inline'
-            }),
-            'Accept-Ranges': 'bytes'
-        };
-
-        if (etag) {
-            let [mtime, sha] = etags.get(absolutePath) || [];
-            if (Number(mtime) !== Number(stats.mtime)) {
-                sha = await calculateSha(handlers, absolutePath);
-                etags.set(absolutePath, [stats.mtime, sha]);
-            }
-            defaultHeaders['ETag'] = `"${sha}"`;
-        } else {
-            defaultHeaders['Last-Modified'] = stats.mtime.toUTCString();
-        }
-
-        const contentType = mime.contentType(base);
-
-        if (contentType) {
-            defaultHeaders['Content-Type'] = contentType;
-        }
-    }
-
-    const headers = Object.assign(defaultHeaders, related);
-
-    for (const key in headers) {
-        if (headers.hasOwnProperty(key) && headers[key] === null) {
-            delete headers[key];
-        }
-    }
-
-    return headers;
-};
 
 const applicable = (decodedPath, configEntry) => {
     debug(`applicable()`);
