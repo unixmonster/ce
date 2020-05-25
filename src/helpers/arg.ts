@@ -1,6 +1,18 @@
+// Debug Setup
+import Debug from 'debug';
+const debug = Debug('arg.ts');
+
+/**
+ *
+ *      V A R I A B L E S
+ *
+ */
 const flagSymbol = Symbol('arg flag');
 
-function arg(opts: any, { argv = process.argv.slice(2), permissive = false, stopAtPositional = false } = {}) {
+function arg(
+    opts: any,
+    { argv = process.argv.slice(2), permissive = false, stopAtPositional = false } = {}
+) {
     if (!opts) {
         throw new Error('Argument specification object is required');
     }
@@ -140,5 +152,8 @@ arg.flag = (fn: any[] | Function) => {
 
 // Utility types
 arg.COUNT = arg.flag((v, name, existingCount) => (existingCount || 0) + 1);
+
+
+// Exports
 
 export = arg;
