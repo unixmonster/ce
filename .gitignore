@@ -6,3 +6,5 @@ package-lock.json
 templates/directory.js
 templates/error.js
 .idea
+inspiration
+.vscode
