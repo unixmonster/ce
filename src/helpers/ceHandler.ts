@@ -2,35 +2,31 @@
 import { promisify } from 'util';
 import path from 'path';
 import { realpath, lstat, createReadStream, readdir } from 'fs';
+import { EOL } from 'os';
 
 // Supplied in this code base
+import slasher from './glob-slash';
+import { getHeaders } from './header'
+import { ensureSlashStart, calculateSha, sourceMatches } from './functions'
 
 // Packages
 import url from 'url-parse';
-import slasher from './glob-slash';
 import { pathToRegexp, compile as regexCompile } from 'path-to-regexp';
 import bytes from 'bytes';
 import isPathInside from 'path-is-inside';
 import parseRange from 'range-parser';
 
-import { ensureSlashStart, calculateSha, sourceMatches } from './functions'
-
-import { getHeaders } from './header'
-
-
-
 // Debug Setup
 import Debug from 'debug';
 const debug = Debug('ceHandler.ts');
 
-
-
 // Other
-import directoryTemplate from '../templates/directory';
-import errorTemplate from '../templates/error';
+import directoryTemplate = require('../templates/directory');
+import errorTemplate = require('../templates/error');
 
 
-
+debug(`directoryTemplate: ${directoryTemplate.toString().replace('\n', '\n')}`);
+debug(`errorTemplate: ${errorTemplate.toString().replace('\n', '\n')}`);
 
 const toTarget = (source: any, destination: any, previousPath: any) => {
     debug(`toTarget()`);
@@ -257,7 +253,6 @@ const renderDirectory = async (current: string, acceptsJSON: boolean, handlers, 
     debug(`handlers: ${JSON.stringify(absolutePath)}`);
     let files = await handlers.readdir(absolutePath);
     debug(`files: ${JSON.stringify(files)}`);
-
     const canRenderSingle = renderSingle && (files.length === 1);
 
     for (let index = 0; index < files.length; index++) {
@@ -378,10 +373,11 @@ const renderDirectory = async (current: string, acceptsJSON: boolean, handlers, 
         paths: subPaths
     };
 
+
     const output = acceptsJSON ? JSON.stringify(spec) : directoryTemplate(spec);
 
 
-    debug(`spec: ${JSON.stringify(spec, null, 2)}`);
+    //debug(`spec: ${JSON.stringify(spec, null, 2)}`);
     debug(`files: ${JSON.stringify(files)}`);
     debug(`directory: ${directory}`)
     debug(`paths: ${JSON.stringify(paths)}`);

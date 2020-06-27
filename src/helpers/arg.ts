@@ -9,7 +9,7 @@ const debug = Debug('arg.ts');
  */
 const flagSymbol = Symbol('arg flag');
 
-function arg(
+function arg (
     opts: any,
     { argv = process.argv.slice(2), permissive = false, stopAtPositional = false } = {}
 ) {
@@ -19,7 +19,7 @@ function arg(
 
     const result = { _: [] };
 
-    const aliases = {};
+    const aliases: string[] = [];
     const handlers = {};
 
     for (const key of Object.keys(opts)) {
